@@ -606,10 +606,45 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var STORAGE_RECIPES = 'hunaochufang_recipes';
 var STORAGE_DISHES = 'hunaochufang_dishes';
+var DATA_URL = 'https://raw.githubusercontent.com/Uoyiz223/hunaochufang/main/data.json';
+var CACHE_TTL = 60000; // 1 minute cache
+var _dataCache = null;
+var _dataCacheTime = 0;
+
+// Load shared data from GitHub
+function loadSharedData(callback) {
+  var now = Date.now();
+  if (_dataCache && (now - _dataCacheTime) < CACHE_TTL) {
+    callback(_dataCache); return;
+  }
+  fetch(DATA_URL + '?t=' + now, { cache: 'no-store' })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d) {
+      _dataCache = d; _dataCacheTime = now;
+      callback(d);
+    })
+    .catch(function() {
+      // Fallback to localStorage
+      callback(null);
+    });
+}
+
+function loadRecipesFromData(data) {
+  if (data && data.recipes) return data.recipes;
+  try { return JSON.parse(localStorage.getItem(STORAGE_RECIPES)) || []; }
+  catch(e) { return []; }
+}
+
+function loadDishesFromData(data) {
+  if (data && data.dishes) return data.dishes;
+  try { return JSON.parse(localStorage.getItem(STORAGE_DISHES)) || []; }
+  catch(e) { return []; }
+}
 
 function loadRecipes() {
   try { return JSON.parse(localStorage.getItem(STORAGE_RECIPES)) || []; }
@@ -622,6 +657,18 @@ function loadDishes() {
   catch(e) { return []; }
 }
 function saveDishes(data) { localStorage.setItem(STORAGE_DISHES, JSON.stringify(data)); }
+
+// Request EasyClaw to sync data to GitHub
+function syncToGitHub() {
+  var recipes = loadRecipes();
+  var dishes = loadDishes();
+  var txt = '## SyncRequest\n```json\n' + JSON.stringify({ recipes: recipes, dishes: dishes }) + '\n```';
+  navigator.clipboard.writeText(txt).then(function() {
+    showToast('📋 数据已复制！粘贴到 EasyClaw 聊天框即可同步到云端');
+  }).catch(function() {
+    showToast('📋 同步数据已生成，请手动复制发送给 EasyClaw');
+  });
+}
 
 // ===== USERS =====
 var USERS = [
@@ -1024,12 +1071,35 @@ function renderRecipes() {
   var grid = document.getElementById('recipeGrid');
   var empty = document.getElementById('recipeEmpty');
   var recipes = loadRecipes();
+  // Try to merge with shared cloud data
+  loadSharedData(function(cloudData) {
+    if (cloudData && cloudData.recipes && cloudData.recipes.length > 0) {
+      // Merge: cloud recipes + local recipes (dedup by date+title)
+      var localRecipes = loadRecipes();
+      var merged = [];
+      var seen = {};
+      cloudData.recipes.forEach(function(r) {
+        var key = (r.date||'') + '|' + (r.title||'');
+        if (!seen[key]) { seen[key] = true; merged.push(r); }
+      });
+      localRecipes.forEach(function(r) {
+        var key = (r.date||'') + '|' + (r.title||'');
+        if (!seen[key]) { seen[key] = true; merged.push(r); }
+      });
+      merged.sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
+      recipes = merged;
+      saveRecipes(merged);
+    }
+    _doRenderRecipes(grid, empty, recipes);
+  });
+}
+
+function _doRenderRecipes(grid, empty, recipes) {
   if (recipes.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); }
   else {
     empty.classList.add('hidden');
-    grid.innerHTML = sharingNote;
     var tip = ENCOURAGE_TIPS[Math.floor(Math.random() * ENCOURAGE_TIPS.length)];
-    grid.innerHTML = '<div class="encourage-banner">💬 ' + tip + '</div>' + recipes.map(function(r, i) {
+    grid.innerHTML = '<div class="encourage-banner" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;"><span>💬 ' + tip + '</span><button class="btn btn-ghost btn-sm" onclick="syncToGitHub()">☁️ 同步到云端</button></div>' + recipes.map(function(r, i) {
       var date = new Date(r.date);
       var dateStr = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
       var imgHtml = r.image ? '<div class="recipe-card-img-wrap"><img class="recipe-card-img" style="object-fit:cover;width:100%;height:100%" src="' + escAttr(r.image) + '" alt="' + escAttr(r.title) + '" style="object-fit:cover" onerror="this.parentElement.innerHTML=\'<div style=background:linear-gradient(135deg,#FDEBD0,#FAD7A1);height:200px;display:flex;align-items:center;justify-content:center;font-size:52px>🍳</div>\'" referrerpolicy="no-referrer"></div>' : '<div class="recipe-card-img-wrap" style="background:linear-gradient(135deg,#FDEBD0,#FAD7A1);display:flex;align-items:center;justify-content:center;height:200px;font-size:52px">🍳</div>';
@@ -1130,6 +1200,28 @@ function showDishDetail(dishIdx) {
 // ===== DISH RENDER =====
 function renderDishes() {
   var grid = document.getElementById('dishGrid'); var empty = document.getElementById('dishEmpty'); var dishes = loadDishes();
+  loadSharedData(function(cloudData) {
+    if (cloudData && cloudData.dishes && cloudData.dishes.length > 0) {
+      var localDishes = loadDishes();
+      var merged = [];
+      var seen = {};
+      cloudData.dishes.forEach(function(d) {
+        var key = (d.date||'') + '|' + (d.title||'');
+        if (!seen[key]) { seen[key] = true; merged.push(d); }
+      });
+      localDishes.forEach(function(d) {
+        var key = (d.date||'') + '|' + (d.title||'');
+        if (!seen[key]) { seen[key] = true; merged.push(d); }
+      });
+      merged.sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
+      dishes = merged;
+      saveDishes(merged);
+    }
+    _doRenderDishes(grid, empty, dishes);
+  });
+}
+
+function _doRenderDishes(grid, empty, dishes) {
   if (dishes.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); }
   else {
     empty.classList.add('hidden');
