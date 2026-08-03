@@ -607,75 +607,67 @@ body {
 
 
 
+
+
 <script>
 // ===== DATA STORE =====
-var STORAGE_RECIPES = 'hunaochufang_recipes';
-var STORAGE_DISHES = 'hunaochufang_dishes';
 var DATA_URL = 'https://raw.githubusercontent.com/Uoyiz223/hunaochufang/main/data.json';
-var CACHE_TTL = 60000; // 1 minute cache
 var _dataCache = null;
-var _dataCacheTime = 0;
 
-// Load shared data from GitHub
+// Load shared data from GitHub (read-only from CDN)
 function loadSharedData(callback) {
-  var now = Date.now();
-  if (_dataCache && (now - _dataCacheTime) < CACHE_TTL) {
-    callback(_dataCache); return;
-  }
-  fetch(DATA_URL + '?t=' + now, { cache: 'no-store' })
+  if (_dataCache) { callback(_dataCache); return; }
+  fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
-      _dataCache = d; _dataCacheTime = now;
+      _dataCache = d;
       callback(d);
     })
     .catch(function() {
-      // Fallback to localStorage
-      callback(null);
+      _dataCache = { recipes: [], dishes: [] };
+      callback(_dataCache);
     });
 }
 
-function loadRecipesFromData(data) {
-  if (data && data.recipes) return data.recipes;
-  try { return JSON.parse(localStorage.getItem(STORAGE_RECIPES)) || []; }
-  catch(e) { return []; }
-}
-
-function loadDishesFromData(data) {
-  if (data && data.dishes) return data.dishes;
-  try { return JSON.parse(localStorage.getItem(STORAGE_DISHES)) || []; }
-  catch(e) { return []; }
+// Save locally + prepare sync payload
+function saveSharedData(data, callback) {
+  _dataCache = data;
+  // Generate sync text for EasyClaw
+  var syncTxt = '# SYNC\n```json\n' + JSON.stringify(data, null, 2) + '\n```';
+  navigator.clipboard.writeText(syncTxt).then(function() {
+    showToast('📋 数据已复制！粘贴到 EasyClaw 聊天框即可同步到云端');
+  }).catch(function() {});
+  if (callback) callback(null);
 }
 
 function loadRecipes() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_RECIPES)) || []; }
-  catch(e) { return []; }
+  if (_dataCache && _dataCache.recipes) return _dataCache.recipes;
+  return [];
 }
-function saveRecipes(data) { localStorage.setItem(STORAGE_RECIPES, JSON.stringify(data)); }
+
+function saveRecipes(data) {
+  var all = _dataCache || { recipes: [], dishes: [] };
+  all.recipes = data;
+  saveSharedData(all);
+}
 
 function loadDishes() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_DISHES)) || []; }
-  catch(e) { return []; }
+  if (_dataCache && _dataCache.dishes) return _dataCache.dishes;
+  return [];
 }
-function saveDishes(data) { localStorage.setItem(STORAGE_DISHES, JSON.stringify(data)); }
 
-// Request EasyClaw to sync data to GitHub
-function syncToGitHub() {
-  var recipes = loadRecipes();
-  var dishes = loadDishes();
-  var txt = '## SyncRequest\n```json\n' + JSON.stringify({ recipes: recipes, dishes: dishes }) + '\n```';
-  navigator.clipboard.writeText(txt).then(function() {
-    showToast('📋 数据已复制！粘贴到 EasyClaw 聊天框即可同步到云端');
-  }).catch(function() {
-    showToast('📋 同步数据已生成，请手动复制发送给 EasyClaw');
-  });
+function saveDishes(data) {
+  var all = _dataCache || { recipes: [], dishes: [] };
+  all.dishes = data;
+  saveSharedData(all);
 }
 
 // ===== USERS =====
 var USERS = [
-  { id: 'nizi', name: '妮子', avatar: 'avatars/妮子.jpg' },
-  { id: 'jianda', name: '健达奇趣蛋', avatar: 'avatars/健达奇趣蛋.jpg' },
-  { id: 'luye', name: '卢老爷子', avatar: 'avatars/卢老爷子.jpg' },
-  { id: 'shuishui', name: '睡睡平安', avatar: 'avatars/睡睡平安.jpg' },
+  { id: 'nizi', name: '妮子', avatar: 'avatars/nizi.jpg' },
+  { id: 'jianda', name: '健达奇趣蛋', avatar: 'avatars/jianda.jpg' },
+  { id: 'luye', name: '卢老爷子', avatar: 'avatars/luye.jpg' },
+  { id: 'shuishui', name: '睡睡平安', avatar: 'avatars/shuishui.jpg' },
 ];
 
 function renderUsers() {
@@ -1070,26 +1062,8 @@ var sharingNote = '<div class="encourage-banner" style="background:linear-gradie
 function renderRecipes() {
   var grid = document.getElementById('recipeGrid');
   var empty = document.getElementById('recipeEmpty');
-  var recipes = loadRecipes();
-  // Try to merge with shared cloud data
   loadSharedData(function(cloudData) {
-    if (cloudData && cloudData.recipes && cloudData.recipes.length > 0) {
-      // Merge: cloud recipes + local recipes (dedup by date+title)
-      var localRecipes = loadRecipes();
-      var merged = [];
-      var seen = {};
-      cloudData.recipes.forEach(function(r) {
-        var key = (r.date||'') + '|' + (r.title||'');
-        if (!seen[key]) { seen[key] = true; merged.push(r); }
-      });
-      localRecipes.forEach(function(r) {
-        var key = (r.date||'') + '|' + (r.title||'');
-        if (!seen[key]) { seen[key] = true; merged.push(r); }
-      });
-      merged.sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
-      recipes = merged;
-      saveRecipes(merged);
-    }
+    var recipes = cloudData ? (cloudData.recipes || []) : loadRecipes();
     _doRenderRecipes(grid, empty, recipes);
   });
 }
@@ -1199,24 +1173,9 @@ function showDishDetail(dishIdx) {
 
 // ===== DISH RENDER =====
 function renderDishes() {
-  var grid = document.getElementById('dishGrid'); var empty = document.getElementById('dishEmpty'); var dishes = loadDishes();
+  var grid = document.getElementById('dishGrid'); var empty = document.getElementById('dishEmpty');
   loadSharedData(function(cloudData) {
-    if (cloudData && cloudData.dishes && cloudData.dishes.length > 0) {
-      var localDishes = loadDishes();
-      var merged = [];
-      var seen = {};
-      cloudData.dishes.forEach(function(d) {
-        var key = (d.date||'') + '|' + (d.title||'');
-        if (!seen[key]) { seen[key] = true; merged.push(d); }
-      });
-      localDishes.forEach(function(d) {
-        var key = (d.date||'') + '|' + (d.title||'');
-        if (!seen[key]) { seen[key] = true; merged.push(d); }
-      });
-      merged.sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
-      dishes = merged;
-      saveDishes(merged);
-    }
+    var dishes = cloudData ? (cloudData.dishes || []) : loadDishes();
     _doRenderDishes(grid, empty, dishes);
   });
 }
