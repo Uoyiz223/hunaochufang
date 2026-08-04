@@ -611,9 +611,11 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
-var DATA_URL = 'https://raw.githubusercontent.com/Uoyiz223/hunaochufang/main/data.json';
+var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
+var DATA_RAW_URL = 'https://raw.githubusercontent.com/Uoyiz223/hunaochufang/main/data.json';
 var GH_API = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
 var _dataCache = null;
 var _dataSha = null;
@@ -621,21 +623,29 @@ var _ghToken = _p1 + _p2; // assembled from split files
 
 // Load shared data from GitHub
 function loadSharedData(callback) {
-  fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' })
+  // Use GitHub API (no CDN cache) to get fresh data
+  fetch(GH_API + '?t=' + Date.now(), { cache: 'no-store' })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
-      _dataCache = d;
-      callback(d);
+      _dataSha = d.sha;
+      // Decode base64 content
+      var decoded = JSON.parse(atob(d.content));
+      _dataCache = decoded;
+      callback(decoded);
     })
     .catch(function() {
-      _dataCache = { recipes: [], dishes: [] };
-      callback(_dataCache);
+      // Fallback to raw CDN with cache bust
+      fetch(DATA_RAW_URL + '?t=' + Date.now(), { cache: 'reload' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          _dataCache = d;
+          callback(d);
+        })
+        .catch(function() {
+          _dataCache = { recipes: [], dishes: [] };
+          callback(_dataCache);
+        });
     });
-  // Also get the SHA for writing
-  fetch(GH_API + '?t=' + Date.now(), { cache: 'no-store' })
-    .then(function(r) { return r.json(); })
-    .then(function(d) { _dataSha = d.sha; })
-    .catch(function() {});
 }
 
 // Auto-sync to GitHub
