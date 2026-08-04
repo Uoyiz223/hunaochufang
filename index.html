@@ -612,6 +612,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -794,17 +795,10 @@ function showRecipeForm(existing, editIdx) {
   }
 
   var html = '<h3>' + (isEdit ? '✏️ 编辑菜谱' : '🥘 添加菜谱') + '</h3>' +
-    '<p class="form-hint">💡 粘贴小红书/B站/抖音链接后点击提取，或直接把链接发给EasyClaw帮你提取食材和步骤～</p>' +
-    '<div class="form-group"><label>📎 小红书 / B站 / 抖音 链接</label>' +
-      '<div class="link-fetch-area">' +
-        '<input type="text" id="fLink" value="' + escAttr(source) + '" placeholder="粘贴链接...">' +
-        '<button class="btn btn-primary btn-sm" onclick="fetchLink()" style="flex-shrink:0">🔍 提取</button>' +
-      '</div>' +
-      '<div class="fetch-status" id="fetchStatus"></div><div id="fetchPreview"></div>' +
-    '</div>' +
+    
     '<div class="form-group"><label>🖼️ 菜谱封面图片</label>' +
-      '<p style="font-size:11px;color:#B8957A;margin:0 0 6px 0;">💡 可以从相册里选一张，也可以先留空——后面通过粘贴小红书/B站链接让 EasyClaw 帮你自动抓取</p>' +
-      '<div class="file-upload-area" onclick="document.getElementById(\'fImageInput\').click()">' +
+      '<p style="font-size:11px;color:#B8957A;margin:0 0 6px 0;">💡 从相册选一张美食照片作为封面</p>' +
+      '<div class="file-upload-area" onclick="document.getElementById(\'fImageInput\').click()" style="cursor:pointer;border:2px dashed var(--card-border);border-radius:10px;padding:20px;text-align:center;background:#FFF;">' +
         imgPreview + '<div id="imgHint" style="' + (image ? 'display:none' : '') + '">📸 点击此区域上传菜谱封面图</div>' +
         '<input type="file" id="fImageInput" accept="image/*" style="display:none" onchange="handleRecipeImage(this)">' +
       '</div>' +
@@ -878,177 +872,12 @@ function handleRecipeImage(input) {
 }
 
 // ===== FETCH LINK (uses allAvailable proxy methods) =====
-function fetchLink() {
-  var link = document.getElementById('fLink').value.trim();
-  var statusEl = document.getElementById('fetchStatus');
-  var previewEl = document.getElementById('fetchPreview');
-  if (!link) { statusEl.innerHTML = '😅 请先粘贴链接哦～'; statusEl.className = 'fetch-status error'; return; }
 
-  // Detect platform
-  var isBilibili = /bilibili|b23\.tv|b23/i.test(link);
-  var isXiaohongshu = /xiaohongshu|xhslink|xhs/i.test(link);
-  var isDouyin = /douyin|dy\.meituan|iesdouyin|douyinvod/i.test(link);
-  var isSupported = isBilibili || isXiaohongshu || isDouyin;
-  pendingLink = link;
 
-  // Try multiple CORS proxy approaches
-  statusEl.innerHTML = '🔄 正在连接提取...';
-  statusEl.className = 'fetch-status loading';
-
-  // Strategy 1: Direct fetch (works for some sites)
-  tryDirect(link);
-
-  function tryDirect(url) {
-    var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, 8000);
-
-    fetch(url, { signal: controller.signal, mode: 'cors', headers: { 'User-Agent': 'Mozilla/5.0' } })
-    .then(function(r) { clearTimeout(timeout); return r.text(); })
-    .then(function(html) {
-      var result = extractInfo(html, url);
-      showResult(result, url);
-    })
-    .catch(function() {
-      clearTimeout(timeout);
-      // Strategy 2: Try with no-cors (won't give text, but try anyway)
-      tryNoCors(url);
-    });
-  }
-
-  function tryNoCors(url) {
-    fetch(url, { mode: 'no-cors' })
-    .then(function() {
-      // no-cors succeeded but we can't read body
-      showCorsFallback(url, isSupported);
-    })
-    .catch(function() {
-      // Strategy 3: Try allOrigins CORS proxy
-      tryCorsProxy(url);
-    });
-  }
-
-  function tryCorsProxy(url) {
-    var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-    fetch(proxyUrl, { signal: (function() { var c = new AbortController(); setTimeout(function() { c.abort(); }, 10000); return c.signal; })() })
-    .then(function(r) { return r.text(); })
-    .then(function(html) {
-      var result = extractInfo(html, url);
-      showResult(result, url);
-    })
-    .catch(function() {
-      showCorsFallback(url, isSupported);
-    });
-  }
-
-  function extractInfo(html, url) {
-    var title = '', desc = '', image = '', ingredients = '';
-
-    // Title from <title> or og:title
-    var tm = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (!tm) tm = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i);
-    if (tm && tm[1]) {
-      title = tm[1].replace(/\s*[-|–—·—]\s*(小红书|哔哩哔哩|Bilibili|抖音|Douyin|快手|bilibili).*$/i, '').replace(/[\[\]【】]/g, '').trim();
-    }
-
-    // Description / method from meta
-    var dm = html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i) ||
-             html.match(/<meta[^>]+content="([^"]+)"[^>]+name="description"/i) ||
-             html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i);
-    if (dm && dm[1]) {
-      desc = dm[1].replace(/&#x2F;/g, '/').replace(/&#x27;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#(\d+);/g, function(m, d) { return String.fromCharCode(d); });
-    }
-
-    // Image
-    var im = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i) ||
-             html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i) ||
-             html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/i);
-    if (im && im[1]) image = im[1];
-
-    // Try to find ingredient-like content (common patterns in Chinese recipe pages)
-    var bodyText = html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
-
-    // Look for ingredient sections
-    var ingrPatterns = [
-      /食材[：:]\s*([^。\n]{20,200})/,
-      /用料[：:]\s*([^。\n]{20,200})/,
-      /准备食材[：:]\s*([^。\n]{20,200})/,
-      /配料[：:]\s*([^。\n]{20,200})/,
-      /材料[：:]\s*([^。\n]{20,200})/,
-    ];
-    for (var p = 0; p < ingrPatterns.length; p++) {
-      var m = bodyText.match(ingrPatterns[p]);
-      if (m && m[1]) { ingredients = m[1].trim(); break; }
-    }
-
-    // If no explicit ingredients section, try to extract list-like patterns
-    if (!ingredients) {
-      var gCount = (bodyText.match(/克|g|ml|勺|杯|个|根|块|片/g) || []).length;
-      if (gCount >= 3) {
-        // Has many measurement units - try to find ingredient list
-        var idxStart = bodyText.search(/食材|用料|配料|准备|需要/);
-        if (idxStart >= 0) {
-          var chunk = bodyText.substring(idxStart, idxStart + 300);
-          // Clean up
-          chunk = chunk.replace(/食材[：:]|用料[：:]|配料[：:]|准备[：:]|需要[：:]/g, '').trim();
-          ingredients = chunk;
-        }
-      }
-    }
-
-    return { title: title, desc: desc, image: image, ingredients: ingredients };
-  }
-
-  function showResult(result, url) {
-    statusEl.className = 'fetch-status success';
-    var parts = [];
-    if (result.title) parts.push('🍲 菜名');
-    if (result.desc) parts.push('📝 步骤');
-    if (result.image) parts.push('🖼️ 图片');
-    if (result.ingredients) parts.push('🛒 食材');
-    statusEl.innerHTML = parts.length > 0 ? '✅ 已提取：' + parts.join(' + ') : '⚠️ 提取内容较少，请手动补充';
-
-    if (result.title) document.getElementById('fTitle').value = result.title;
-    if (result.desc) document.getElementById('fMethod').value = result.desc;
-    if (result.ingredients) document.getElementById('fIngredients').value = result.ingredients;
-    if (result.image) {
-      recipeImageData = result.image;
-      previewEl.innerHTML = '<div class="fetched-preview"><img src="' + escAttr(result.image) + '" alt="预览" onerror="this.style.display=\'none\'" referrerpolicy="no-referrer" style="max-width:100%;max-height:160px;border-radius:10px;"><p style="font-size:13px;color:#7A6553">🖼️ ' + escHtml(result.title || '') + '</p></div>';
-    }
-  }
-
-  function showCorsFallback(url, supported) {
-    statusEl.innerHTML = '⚠️ 浏览器无法直接访问该站点（安全限制）';
-    statusEl.className = 'fetch-status error';
-    var html = '<div class="fetched-preview" style="background:#FFF8F0;border-color:#E8816B">' +
-      '<p style="font-size:14px;color:#7A6553;margin-bottom:8px;">💡 <b>推荐做法：</b>把下面这段话发给 EasyClaw 帮你提取</p>' +
-      '<div class="copy-hint-box" onclick="copyExtractRequest()" title="点击复制">' +
-        '<code style="font-size:12px;color:#C25A1F;word-break:break-all;">提取菜谱：' + escHtml(url) + '</code>' +
-        '<span class="copy-btn" id="copyBtn">📋 复制并发送</span>' +
-      '</div>' +
-      '<p style="font-size:12px;color:#B8957A;margin-top:8px;">🔗 链接已保存，你也可以手动填写下方内容</p>' +
-      '</div>';
-    previewEl.innerHTML = html;
-    pendingLink = url;
-  }
-}
-
-// Copy extract request to clipboard
-function copyExtractRequest() {
-  var link = document.getElementById('fLink').value.trim() || pendingLink;
-  if (!link) return;
-  var text = '提取菜谱：' + link;
-  navigator.clipboard.writeText(text).then(function() {
-    showToast('📋 已复制！粘贴到聊天框发给 EasyClaw 即可');
-    var btn = document.getElementById('copyBtn');
-    if (btn) { btn.textContent = '✅ 已复制'; setTimeout(function() { btn.textContent = '📋 复制并发送'; }, 2000); }
-  }).catch(function() {
-    showToast('💡 手动复制链接，粘贴到聊天框发给 EasyClaw');
-  });
-}
 
 function saveRecipeForm(editIdx) {
   var title = document.getElementById('fTitle').value.trim();
-  var source = document.getElementById('fLink').value.trim() || pendingLink;
+  var source = '';
   var authorName = document.getElementById('fAuthor').value;
   var method = document.getElementById('fMethod').value.trim();
   var ingredients = document.getElementById('fIngredients').value.trim();
