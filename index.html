@@ -41,10 +41,12 @@ body {
   min-height: 100vh;
   /* Manga-inspired halftone dots + warm gradient */
   background-image:
-    radial-gradient(circle, rgba(0,0,0,0.03) 1px, transparent 1px),
+    radial-gradient(circle, rgba(0,0,0,0.06) 0.8px, transparent 0.8px),
+    radial-gradient(circle, rgba(180,120,60,0.04) 0.5px, transparent 0.5px),
     linear-gradient(180deg, #FFF8ED 0%, #FFF3E3 40%, #FFEDD9 100%);
-  background-size: 24px 24px, 100% 100%;
-  /* Subtle paper texture via noise-like pattern */
+  background-size: 18px 18px, 27px 27px, 100% 100%;
+  background-position: 0 0, 9px 9px, 0 0;
+  /* Hand-drawn paper lines */
   position: relative;
 }
 body::before {
@@ -52,14 +54,14 @@ body::before {
   position: fixed;
   inset: 0;
   background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(180,130,90,0.015) 3px, rgba(180,130,90,0.015) 4px);
+    repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(200,160,110,0.05) 28px, rgba(200,160,110,0.05) 29px);
   pointer-events: none;
   z-index: -1;
 }
 
 .header {
   background: linear-gradient(135deg, #FFF5E6 0%, #FFE8D0 50%, #FFDDB8 100%);
-  border-bottom: 3px solid #E8C9A0;
+  border-bottom: 3px solid #C8A880;
   padding: 0 24px;
   position: sticky;
   top: 0;
@@ -103,10 +105,10 @@ body::before {
 
 .users-strip {
   background: linear-gradient(135deg, #FFF9F2 0%, #FFF3E3 100%);
-  border: 2px solid #E8D0B8;
-  border-radius: 14px; padding: 20px 32px;
+  border: 2.5px solid #D4B896;
+  border-radius: 12px; padding: 20px 32px;
   margin-bottom: 36px;
-  box-shadow: 3px 3px 0 rgba(180,130,100,0.1), 0 4px 12px rgba(180,130,100,0.06);
+  box-shadow: 4px 4px 0 rgba(160,110,70,0.12), 0 4px 12px rgba(180,130,100,0.06);
   display: flex; align-items: center; justify-content: center;
   gap: 36px; flex-wrap: wrap;
 }
@@ -195,10 +197,10 @@ body::before {
 }
 .recipe-card {
   background: var(--card-bg);
-  border: 2px solid #E8D0B8;
-  border-radius: 14px;
+  border: 2.5px solid #D4B896;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 3px 3px 0 rgba(180,130,100,0.12), 0 2px 8px rgba(180,130,100,0.06);
+  box-shadow: 4px 4px 0 rgba(160,110,70,0.15), 0 3px 12px rgba(180,130,100,0.08);
   transition: var(--transition);
   position: relative;
 }
@@ -284,10 +286,10 @@ body::before {
 }
 .dish-card {
   background: var(--card-bg);
-  border: 2px solid #E8D0B8;
-  border-radius: 14px;
+  border: 2.5px solid #D4B896;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 3px 3px 0 rgba(180,130,100,0.12), 0 2px 8px rgba(180,130,100,0.06);
+  box-shadow: 4px 4px 0 rgba(160,110,70,0.15), 0 3px 12px rgba(180,130,100,0.08);
   transition: var(--transition);
   position: relative;
 }
@@ -345,7 +347,7 @@ body::before {
 .modal-overlay.hidden { display: none; }
 .modal {
   background: linear-gradient(180deg, #FFFBF5 0%, #FFF6EC 100%);
-  border: 2px solid #E8D0B8;
+  border: 2.5px solid #D4B896;
   border-radius: 14px;
   box-shadow: 6px 6px 0 rgba(180,130,100,0.12), 0 12px 40px rgba(180,130,100,0.15);
   width: 100%; max-width: 540px;
@@ -460,14 +462,14 @@ body::before {
 .encourage-banner {
   grid-column: 1 / -1;
   background: linear-gradient(135deg, #FFF5E6, #FFEAD4);
-  border: 2px solid #EFD0B0;
+  border: 2.5px solid #D4B896;
   border-radius: 12px;
   padding: 12px 20px;
   text-align: center;
   font-family: var(--font-body);
   font-size: 15px; color: var(--accent-deep);
   letter-spacing: 1px;
-  box-shadow: 2px 2px 0 rgba(200,150,100,0.1);
+  box-shadow: 3px 3px 0 rgba(160,110,70,0.12);
 }
 .recipe-card-img-wrap { height: 200px; overflow: hidden; }
 .recipe-ingredients {
@@ -523,14 +525,14 @@ body::before {
 .encourage-banner {
   grid-column: 1 / -1;
   background: linear-gradient(135deg, #FFF5E6, #FFEAD4);
-  border: 2px solid #EFD0B0;
+  border: 2.5px solid #D4B896;
   border-radius: 12px;
   padding: 12px 20px;
   text-align: center;
   font-family: var(--font-body);
   font-size: 15px; color: var(--accent-deep);
   letter-spacing: 1px;
-  box-shadow: 2px 2px 0 rgba(200,150,100,0.1);
+  box-shadow: 3px 3px 0 rgba(160,110,70,0.12);
 }
 .recipe-card-img-wrap { height: 200px; overflow: hidden; }
 .recipe-card-img-wrap .recipe-card-img { width: 100%; height: 100%; object-fit: cover; }
