@@ -615,6 +615,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -868,12 +869,19 @@ function openCropModal(imageData) {
     '</div>' +
     '<p style="font-size:12px;color:#B8957A;margin:8px 0;">拖拽图片调整位置，滚动鼠标缩放，框内为最终裁剪区域</p>' +
     '<div style="display:flex;gap:10px;justify-content:center;margin-top:12px;">' +
-      '<button class="btn btn-ghost" onclick="closeCropModal()">跳过裁剪</button>' +
-      '<button class="btn btn-primary" onclick="applyCrop()">✅ 确认裁剪</button>' +
+      '<button class="btn btn-ghost" id="btnSkipCrop">跳过裁剪</button>' +
+      '<button class="btn btn-primary" id="btnApplyCrop">✅ 确认裁剪</button>' +
     '</div></div>';
   openModal(html, '560px');
   _cropTarget = { imageData: imageData };
-  setTimeout(initCrop, 300);
+  // Bind buttons manually (safer than inline onclick)
+  setTimeout(function() {
+    initCrop();
+    var skipBtn = document.getElementById('btnSkipCrop');
+    var applyBtn = document.getElementById('btnApplyCrop');
+    if (skipBtn) skipBtn.onclick = closeCropModal;
+    if (applyBtn) applyBtn.onclick = applyCrop;
+  }, 300);
 }
 
 function closeCropModal() {
@@ -973,22 +981,52 @@ function handleRecipeImage(input) {
 
 
 
-// ===== OCR EXTRACT (sends image to EasyClaw for text extraction) =====
+// ===== OCR EXTRACT using Tesseract.js (runs entirely in browser) =====
+var _ocrWorker = null;
 function ocrFromImage(type) {
   var imgData = type === 'ingr' ? ingrImageData : methodImageData;
   if (!imgData) { showToast('⚠️ 请先上传截图再提取文字'); return; }
-  var fieldName = type === 'ingr' ? '食材' : '制作步骤';
-  // Copy to clipboard with instruction
-  var text = '提取文字：' + fieldName + '\n[图片已上传，请在聊天框中发送此消息，EasyClaw会帮你从截图中提取文字]';
-  navigator.clipboard.writeText(text).then(function() {
-    showToast('📋 请将截图和此提示发送到 EasyClaw 聊天框提取' + fieldName + '文字');
-  }).catch(function() {
-    showToast('📋 请将截图发到 EasyClaw 聊天框，说"提取' + fieldName + '文字"');
-  });
-  // Also copy the image data (as actual image for pasting)
-  fetch(imgData).then(function(r) { return r.blob(); }).then(function(blob) {
-    navigator.clipboard.write([new ClipboardItem({'image/png': blob})]).catch(function() {});
-  });
+  var targetId = type === 'ingr' ? 'fIngredients' : 'fMethod';
+  var existing = document.getElementById(targetId);
+  if (existing) { existing.value = '🔍 正在识别文字，请稍候...'; }
+  showToast('🔍 正在识别文字...');
+
+  // Load Tesseract if not loaded yet
+  function doOCR() {
+    if (typeof Tesseract === 'undefined') {
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      script.onload = function() { runTesseract(); };
+      script.onerror = function() {
+        showToast('⚠️ OCR 库加载失败，请检查网络或直接打字');
+        if (existing) { existing.value = ''; }
+      };
+      document.head.appendChild(script);
+    } else {
+      runTesseract();
+    }
+  }
+
+  function runTesseract() {
+    Tesseract.recognize(imgData, 'chi_sim+eng', {
+      logger: function(m) {
+        if (m.status === 'recognizing text' && m.progress) {
+          var pct = Math.round(m.progress * 100);
+          if (existing && pct % 20 === 0) { existing.value = '🔍 识别中...' + pct + '%'; }
+        }
+      }
+    }).then(function(result) {
+      var text = result.data.text.trim();
+      if (!text) { showToast('⚠️ 未识别到文字，请手动输入'); if (existing) existing.value = ''; return; }
+      if (existing) { existing.value = text; }
+      showToast('✅ 识别完成！请检查并修改文字');
+    }).catch(function(err) {
+      showToast('⚠️ 识别失败，请直接打字');
+      if (existing) { existing.value = '';
+      console.error('OCR error:', err); }
+    });
+  }
+  doOCR();
 }
 
 
@@ -1175,19 +1213,36 @@ function _doRenderDishes(grid, empty, dishes) {
   if (dishes.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); }
   else {
     empty.classList.add('hidden');
-    grid.innerHTML = '<div class="encourage-banner" style="background:linear-gradient(135deg,#E8F5E2,#D4ECD0);border-color:#A8D5A2;margin-bottom:16px;">👥 共享厨房：你做的每一道菜大家都能看到！</div><div class="encourage-banner">🍽️ 每一份成品都是爱的味道～</div>' + dishes.map(function(d, i) {
-      var ratingLabels = ['💩 拉完了', '😐 NPC', '🙂 人上人', '😋 顶级', '🤯 夯爆了'];
+    var ratingLabels = ['💩 拉完了', '😐 NPC', '🙂 人上人', '😋 顶级', '🤯 夯爆了'];
+    var parts = [];
+    parts.push('<div class="encourage-banner" style="background:linear-gradient(135deg,#E8F5E2,#D4ECD0);border-color:#A8D5A2;margin-bottom:16px;">👥 共享厨房：你做的每一道菜大家都能看到！</div>');
+    parts.push('<div class="encourage-banner">🍽️ 每一份成品都是爱的味道～</div>');
+    for (var i = 0; i < dishes.length; i++) {
+      var d = dishes[i];
       var ratingLabel = d.rating > 0 ? ratingLabels[d.rating - 1] : '❓ 未评分';
       var ratingColor = d.rating >= 5 ? '#E07A3D' : d.rating >= 4 ? '#5B8C5A' : d.rating >= 3 ? '#6A8CBF' : d.rating >= 2 ? '#B8957A' : d.rating >= 1 ? '#D4695A' : '#7A6553';
-      var date = new Date(d.date); var dateStr = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
-      var imgTag = d.photo ? '<img class="dish-photo" style="object-fit:cover" src="' + escAttr(d.photo) + '" alt="' + escAttr(d.title) + '" onerror="this.style.background=\'linear-gradient(135deg, #FDEBD0, #FAD7A1)\';this.src=\'\'" referrerpolicy="no-referrer">' : '<div class="dish-photo" style="object-fit:cover" style="display:flex;align-items:center;justify-content:center;font-size:52px">🍽️</div>';
-      return '<div class="dish-card" style="cursor:pointer" onclick="showDishDetail(' + i + ')">' + imgTag + '<div class="dish-body"><div class="dish-title">' + escHtml(d.title) + '</div>' +
-        '<div class="dish-author">👤 ' + escHtml(d.authorName || '') + '</div>' +
-        '<div class="dish-desc">' + (d.desc ? escHtml(d.desc) : '💬 等待添加品尝描述...') + '</div>' +
-        '<div class="dish-rating-single"><span style="color:' + ratingColor + ';font-weight:bold;font-size:16px;">' + ratingLabel + '</span></div>' +
-        '<div style="font-size:12px;color:#B8957A;margin-top:6px">🕐 ' + dateStr + '</div></div>' +
-        '<div class="dish-footer"><button class="btn btn-ghost btn-sm btnEditDish" data-idx="' + i + '">✏️ 编辑</button><button class="btn btn-danger btn-sm btnDelDish" data-idx="' + i + '">🗑️</button></div></div>';
-    }).join('');
+      var date = new Date(d.date);
+      var dateStr = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+      var imgTag = '';
+      if (d.photo) {
+        imgTag = '<img class="dish-photo" style="object-fit:cover" src="' + escAttr(d.photo) + '" alt="' + escAttr(d.title) + '" onerror="this.style.background=\'linear-gradient(135deg,#FDEBD0,#FAD7A1)\';this.src=\'\'" referrerpolicy="no-referrer">';
+      } else {
+        imgTag = '<div class="dish-photo" style="display:flex;align-items:center;justify-content:center;font-size:52px">🍽️</div>';
+      }
+      var html = '<div class="dish-card" style="cursor:pointer" onclick="showDishDetail(' + i + ')">';
+      html += imgTag;
+      html += '<div class="dish-body">';
+      html += '<div class="dish-title">' + escHtml(d.title) + '</div>';
+      html += '<div class="dish-author">👤 ' + escHtml(d.authorName || '') + '</div>';
+      html += '<div class="dish-desc">' + (d.desc ? escHtml(d.desc) : '💬 等待添加品尝描述...') + '</div>';
+      html += '<div class="dish-rating-single"><span style="color:' + ratingColor + ';font-weight:bold;font-size:16px;">' + ratingLabel + '</span></div>';
+      html += '<div style="font-size:12px;color:#B8957A;margin-top:6px">🕐 ' + dateStr + '</div>';
+      html += '</div>';
+      html += '<div class="dish-footer"><button class="btn btn-ghost btn-sm btnEditDish" data-idx="' + i + '">✏️ 编辑</button><button class="btn btn-danger btn-sm btnDelDish" data-idx="' + i + '">🗑️</button></div>';
+      html += '</div>';
+      parts.push(html);
+    }
+    grid.innerHTML = parts.join('');
   }
   bindDishActions();
 }
