@@ -621,6 +621,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -659,7 +660,8 @@ function loadSharedData(callback) {
           callback(d);
         })
         .catch(function() {
-          _dataCache = { recipes: [], dishes: [] };
+          // Keep existing cache if we have one, only use empty as last resort
+          if (!_dataCache) { _dataCache = { recipes: [], dishes: [] }; }
           callback(_dataCache);
         });
     });
