@@ -51,7 +51,15 @@ body {
 }
 
 .header {
-  background: linear-gradient(135deg, #FFF5E6 0%, #FFE8D0 50%, #FFDDB8 100%);
+  background:
+    linear-gradient(135deg, #FFF5E6 0%, #FFE8D0 50%, #FFDDB8 100%);
+  background-image:
+    linear-gradient(135deg, #FFF5E6 0%, #FFE8D0 50%, #FFDDB8 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent, transparent 40px,
+      rgba(200,160,110,0.06) 40px, rgba(200,160,110,0.06) 42px
+    );
   border-bottom: 3px solid #C8A880;
   padding: 0 24px;
   position: sticky;
@@ -97,7 +105,7 @@ body {
 .users-strip {
   background: linear-gradient(135deg, #FFF9F2 0%, #FFF3E3 100%);
   border: 2.5px solid #D4B896;
-  border-radius: 12px; padding: 20px 32px;
+  border-radius: 10px 20px 10px 20px; padding: 20px 32px;
   margin-bottom: 36px;
   box-shadow: 4px 4px 0 rgba(160,110,70,0.12), 0 4px 12px rgba(180,130,100,0.06);
   display: flex; align-items: center; justify-content: center;
@@ -149,7 +157,7 @@ body {
 
 .btn {
   font-family: var(--font-body); font-size: 15px;
-  padding: 10px 24px; border: none; border-radius: 24px;
+  padding: 10px 24px; border: 2px solid transparent; border-radius: 20px 28px 20px 28px;
   cursor: pointer; transition: var(--transition);
   letter-spacing: 1px; display: inline-flex;
   align-items: center; gap: 6px;
@@ -189,7 +197,7 @@ body {
 .recipe-card {
   background: var(--card-bg);
   border: 2.5px solid #D4B896;
-  border-radius: 12px;
+  border-radius: 10px 20px 10px 20px;
   overflow: hidden;
   box-shadow: 4px 4px 0 rgba(160,110,70,0.15), 0 3px 12px rgba(180,130,100,0.08);
   transition: var(--transition);
@@ -205,7 +213,7 @@ body {
 }
 .recipe-card:hover {
   box-shadow: 5px 5px 0 rgba(180,130,100,0.18), 0 8px 24px rgba(180,130,100,0.14);
-  transform: translateY(-3px);
+  transform: translateY(-3px) rotate(-0.5deg);
 }
 .recipe-card-img {
   width: 100%; height: 200px; object-fit: cover;
@@ -278,7 +286,7 @@ body {
 .dish-card {
   background: var(--card-bg);
   border: 2.5px solid #D4B896;
-  border-radius: 12px;
+  border-radius: 10px 20px 10px 20px;
   overflow: hidden;
   box-shadow: 4px 4px 0 rgba(160,110,70,0.15), 0 3px 12px rgba(180,130,100,0.08);
   transition: var(--transition);
@@ -294,7 +302,7 @@ body {
 }
 .dish-card:hover {
   box-shadow: 5px 5px 0 rgba(180,130,100,0.18), 0 8px 24px rgba(180,130,100,0.14);
-  transform: translateY(-3px);
+  transform: translateY(-3px) rotate(0.5deg);
 }
 .dish-photo {
   width: 100%; height: 240px; object-fit: cover;
@@ -339,7 +347,7 @@ body {
 .modal {
   background: linear-gradient(180deg, #FFFBF5 0%, #FFF6EC 100%);
   border: 2.5px solid #D4B896;
-  border-radius: 14px;
+  border-radius: 10px 24px 10px 24px;
   box-shadow: 6px 6px 0 rgba(180,130,100,0.12), 0 12px 40px rgba(180,130,100,0.15);
   width: 100%; max-width: 540px;
   max-height: 85vh; overflow-y: auto;
@@ -498,16 +506,26 @@ body {
 
 /* Toast */
 .toast-msg {
-  position: fixed; bottom: 40px; left: 50%;
+  position: fixed; bottom: 50px; left: 50%;
   transform: translateX(-50%);
   background: #5B8C5A; color: #fff;
-  padding: 14px 28px; border-radius: 20px;
+  padding: 14px 28px 18px 28px; border-radius: 16px 16px 16px 4px;
   font-family: KaiTi, STKaiti, serif;
   font-size: 15px; letter-spacing: 1px;
   z-index: 999; white-space: nowrap;
   box-shadow: 4px 4px 0 rgba(60,90,60,0.2), 0 6px 24px rgba(91,140,90,0.25);
   animation: toastIn 0.4s ease;
   border: 2px solid rgba(255,255,255,0.3);
+}
+.toast-msg::after {
+  content: '';
+  position: absolute;
+  bottom: -10px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 12px solid #5B8C5A;
 }
 .toast-msg.toast-hide { opacity: 0; transition: opacity 0.4s ease; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
@@ -583,16 +601,26 @@ body {
 
 /* Toast */
 .toast-msg {
-  position: fixed; bottom: 40px; left: 50%;
+  position: fixed; bottom: 50px; left: 50%;
   transform: translateX(-50%);
   background: #5B8C5A; color: #fff;
-  padding: 14px 28px; border-radius: 20px;
+  padding: 14px 28px 18px 28px; border-radius: 16px 16px 16px 4px;
   font-family: KaiTi, STKaiti, serif;
   font-size: 15px; letter-spacing: 1px;
   z-index: 999; white-space: nowrap;
   box-shadow: 4px 4px 0 rgba(60,90,60,0.2), 0 6px 24px rgba(91,140,90,0.25);
   animation: toastIn 0.4s ease;
   border: 2px solid rgba(255,255,255,0.3);
+}
+.toast-msg::after {
+  content: '';
+  position: absolute;
+  bottom: -10px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 12px solid #5B8C5A;
 }
 .toast-msg.toast-hide { opacity: 0; transition: opacity 0.4s ease; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
