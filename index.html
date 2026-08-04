@@ -613,6 +613,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -807,16 +808,18 @@ function showRecipeForm(existing, editIdx) {
     '<div class="form-group"><label>👤 收藏者</label><select id="fAuthor">' + authorOptions + '</select></div>' +
     '<div class="form-group"><label>🛒 所需食材</label>' +
     '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">' +
-      '<button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById(\'fIngredientsImg\').click()" style="flex-shrink:0;">📷 上传食材截图</button>' +
-      '<span style="font-size:11px;color:#B8957A;">也可以下方直接打字</span>' +
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById(\'fIngredientsImg\').click()" style="flex-shrink:0;">📷 上传截图</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="ocrFromImage(\'ingr\')" style="flex-shrink:0;color:var(--accent-green);">🔍 提取文字</button>' +
+      '<span style="font-size:11px;color:#B8957A;">或下方打字</span>' +
       '<input type="file" id="fIngredientsImg" accept="image/*" style="display:none" onchange="handleIngrImage(this)">' +
       '<div id="ingrImgPreview" style="width:100%;">' + (ingrImageData ? '<img src="' + ingrImageData + '" style="max-width:100%;max-height:80px;border-radius:6px;">' : '') + '</div>' +
     '</div>' +
     '<textarea id="fIngredients" placeholder="例如：排骨 500g、生抽 2勺、料酒 1勺...">' + escHtml(ingredients) + '</textarea></div>' +
     '<div class="form-group"><label>📝 制作方法</label>' +
     '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">' +
-      '<button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById(\'fMethodImg\').click()" style="flex-shrink:0;">📷 上传步骤截图</button>' +
-      '<span style="font-size:11px;color:#B8957A;">或文字输入</span>' +
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById(\'fMethodImg\').click()" style="flex-shrink:0;">📷 上传截图</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="ocrFromImage(\'method\')" style="flex-shrink:0;color:var(--accent-green);">🔍 提取文字</button>' +
+      '<span style="font-size:11px;color:#B8957A;">或手动输入</span>' +
       '<input type="file" id="fMethodImg" accept="image/*" style="display:none" onchange="handleMethodImage(this)">' +
       '<div id="methodImgPreview" style="width:100%;">' + (methodImageData ? '<img src="' + methodImageData + '" style="max-width:100%;max-height:80px;border-radius:6px;">' : '') + '</div>' +
     '</div>' +
@@ -849,29 +852,140 @@ function handleMethodImage(input) {
   };
   reader.readAsDataURL(file);
 }
+var _cropTarget = null;
+function openCropModal(imageData) {
+  var html = '<div style="text-align:center;"><h3 style="margin-bottom:12px;">✂️ 裁剪封面图片</h3>' +
+    '<div style="position:relative;max-height:60vh;overflow:hidden;cursor:move;user-select:none;" id="cropWrapper">' +
+      '<img id="cropImg" src="' + imageData + '" style="max-width:100%;display:block;user-select:none;" draggable="false">' +
+      '<div id="cropOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);pointer-events:none;">' +
+        '<div id="cropBox" style="position:absolute;border:2px solid #fff;background:rgba(255,255,255,0.15);pointer-events:none;"></div>' +
+      '</div>' +
+    '</div>' +
+    '<p style="font-size:12px;color:#B8957A;margin:8px 0;">拖拽图片调整位置，滚动鼠标缩放，框内为最终裁剪区域</p>' +
+    '<div style="display:flex;gap:10px;justify-content:center;margin-top:12px;">' +
+      '<button class="btn btn-ghost" onclick="closeCropModal()">跳过裁剪</button>' +
+      '<button class="btn btn-primary" onclick="applyCrop()">✅ 确认裁剪</button>' +
+    '</div></div>';
+  openModal(html, '560px');
+  _cropTarget = { imageData: imageData };
+  setTimeout(initCrop, 300);
+}
+
+function closeCropModal() {
+  // Restore recipe form
+  showRecipeForm(null, -1);
+  // Re-inject the image data
+  recipeImageData = _cropTarget ? _cropTarget.imageData : null;
+  var imgHint = document.getElementById('imgHint');
+  if (imgHint && recipeImageData) {
+    imgHint.style.display = 'none';
+    var area = imgHint.parentElement;
+    var existing = area.querySelector('.preview-img');
+    if (existing) existing.remove();
+    var img = document.createElement('img');
+    img.className = 'preview-img';
+    img.src = recipeImageData;
+    img.style.cssText = 'max-width:100%;max-height:140px;border-radius:10px;margin-bottom:8px;display:block;';
+    area.insertBefore(img, area.firstChild);
+  }
+}
+
+function initCrop() {
+  var img = document.getElementById('cropImg');
+  var box = document.getElementById('cropBox');
+  var wrapper = document.getElementById('cropWrapper');
+  if (!img || !box) return;
+  var size = Math.min(wrapper.clientWidth, img.naturalWidth, img.naturalHeight, 300);
+  var left = (wrapper.clientWidth - size) / 2;
+  var top = (img.naturalHeight ? (Math.min(img.clientHeight||400,400) - size) / 2 : 50);
+  box.style.width = size + 'px';
+  box.style.height = size + 'px';
+  box.style.left = left + 'px';
+  box.style.top = top + 'px';
+  var scale = 1;
+  wrapper.onwheel = function(e) {
+    e.preventDefault();
+    scale = Math.max(0.5, Math.min(3, scale + (e.deltaY < 0 ? 0.1 : -0.1)));
+    img.style.transform = 'scale(' + scale + ')';
+    img.style.transformOrigin = '0 0';
+  };
+  var dragging = false, startX, startY, imgX = 0, imgY = 0;
+  wrapper.onmousedown = function(e) { dragging = true; startX = e.clientX - imgX; startY = e.clientY - imgY; e.preventDefault(); };
+  wrapper.onmousemove = function(e) { if (dragging) { imgX = e.clientX - startX; imgY = e.clientY - startY; img.style.marginLeft = imgX + 'px'; img.style.marginTop = imgY + 'px'; } };
+  wrapper.onmouseup = function() { dragging = false; };
+  wrapper.onmouseleave = function() { dragging = false; };
+}
+
+function applyCrop() {
+  var img = document.getElementById('cropImg');
+  var box = document.getElementById('cropBox');
+  if (!img || !box) { closeCropModal(); return; }
+  var canvas = document.createElement('canvas');
+  var rect = img.getBoundingClientRect();
+  var boxRect = box.getBoundingClientRect();
+  var scaleX = img.naturalWidth / rect.width;
+  var scaleY = img.naturalHeight / rect.height;
+  var sx = (boxRect.left - rect.left) * scaleX;
+  var sy = (boxRect.top - rect.top) * scaleY;
+  var sw = boxRect.width * scaleX;
+  var size = Math.min(sw, 400);
+  canvas.width = size; canvas.height = size;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(img, sx, sy, sw, sw, 0, 0, size, size);
+  recipeImageData = canvas.toDataURL('image/jpeg', 0.85);
+  _cropTarget.imageData = recipeImageData;
+  closeCropModal();
+  closeModal();
+  // Re-show form with cropped image
+  setTimeout(function() {
+    var title = document.getElementById('fTitle');
+    var author = document.getElementById('fAuthor');
+    var ingr = document.getElementById('fIngredients');
+    var method = document.getElementById('fMethod');
+    showRecipeForm({
+      title: title ? title.value : '',
+      authorName: author ? author.value : '',
+      ingredients: ingr ? ingr.value : '',
+      method: method ? method.value : '',
+      image: recipeImageData,
+      ingrImage: ingrImageData,
+      methodImage: methodImageData
+    }, -1);
+  }, 200);
+}
+
 function handleRecipeImage(input) {
   var file = input.files[0];
   if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
     recipeImageData = e.target.result;
-    // Remove old previews
-    var existing = document.querySelectorAll('.file-upload-area .preview-img');
-    for (var i = 0; i < existing.length; i++) existing[i].remove();
-    var img = document.createElement('img');
-    img.src = recipeImageData; img.alt = '菜谱图片';
-    img.style.cssText = 'max-width:100%;max-height:140px;border-radius:10px;margin-bottom:8px;display:block;';
-    // Find the image upload area and prepend
-    var area = document.querySelector('#imgHint');
-    if (area && area.parentElement) {
-      area.parentElement.insertBefore(img, area);
-      area.style.display = 'none';
-    }
+    // Show crop modal
+    openCropModal(recipeImageData);
   };
   reader.readAsDataURL(file);
 }
 
-// ===== FETCH LINK (uses allAvailable proxy methods) =====
+
+
+// ===== OCR EXTRACT (sends image to EasyClaw for text extraction) =====
+function ocrFromImage(type) {
+  var imgData = type === 'ingr' ? ingrImageData : methodImageData;
+  if (!imgData) { showToast('⚠️ 请先上传截图再提取文字'); return; }
+  var fieldName = type === 'ingr' ? '食材' : '制作步骤';
+  // Copy to clipboard with instruction
+  var text = '提取文字：' + fieldName + '\n[图片已上传，请在聊天框中发送此消息，EasyClaw会帮你从截图中提取文字]';
+  navigator.clipboard.writeText(text).then(function() {
+    showToast('📋 请将截图和此提示发送到 EasyClaw 聊天框提取' + fieldName + '文字');
+  }).catch(function() {
+    showToast('📋 请将截图发到 EasyClaw 聊天框，说"提取' + fieldName + '文字"');
+  });
+  // Also copy the image data (as actual image for pasting)
+  fetch(imgData).then(function(r) { return r.blob(); }).then(function(blob) {
+    navigator.clipboard.write([new ClipboardItem({'image/png': blob})]).catch(function() {});
+  });
+}
+
 
 
 
