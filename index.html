@@ -136,7 +136,8 @@ body {
 .user-chip {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   transition: var(--transition);
-  padding: 10px 14px;
+  padding: 10px 12px;
+  width: 110px;
   background: rgba(255,255,255,0.5);
   border-radius: 12px;
   border: 1.5px solid rgba(212,184,150,0.3);
@@ -166,6 +167,10 @@ body {
   color: var(--text-primary);
   letter-spacing: 1px;
   white-space: nowrap;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .page-section { display: none; }
@@ -465,9 +470,9 @@ body {
   .logo { font-size: 18px; }
   .nav-btn { padding: 5px 10px; font-size: 13px; }
   .main { padding: 14px 10px 48px; }
-  .users-strip { gap: 10px; padding: 12px 12px 14px; }
-  .user-chip { gap: 4px; padding: 8px 10px; }
-  .user-chip .avatar { width: 38px; height: 38px; outline-offset: 2px; }
+  .users-strip { gap: 10px; padding: 12px 10px 14px; }
+  .user-chip { gap: 4px; padding: 8px 6px; width: 90px; }
+  .user-chip .avatar { width: 36px; height: 36px; outline-offset: 2px; }
   .user-chip .name { font-size: 12px; }
   .recipe-grid, .dish-grid { grid-template-columns: 1fr; gap: 14px; }
   .recipe-card-img-wrap, .recipe-card-img { height: 170px; }
@@ -691,6 +696,7 @@ body {
 <div class="modal-overlay hidden" id="modalOverlay">
   <div class="modal" id="modalContent"></div>
 </div>
+
 
 
 
