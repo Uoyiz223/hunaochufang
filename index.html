@@ -32,23 +32,37 @@ html { scroll-behavior: smooth; }
 
 body {
   font-family: var(--font-body);
-  background: var(--bg-cream);
+  background: #FFFAF2;
   color: var(--text-primary);
   line-height: 1.7;
   min-height: 100vh;
+  /* Manga-inspired halftone dots + warm gradient */
   background-image:
-    radial-gradient(ellipse at 20% 20%, rgba(255, 180, 120, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(255, 140, 80, 0.06) 0%, transparent 50%);
+    radial-gradient(circle, rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(180deg, #FFF8ED 0%, #FFF3E3 40%, #FFEDD9 100%);
+  background-size: 24px 24px, 100% 100%;
+  /* Subtle paper texture via noise-like pattern */
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(180,130,90,0.015) 3px, rgba(180,130,90,0.015) 4px);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .header {
-  background: linear-gradient(135deg, #FDF2E9 0%, #FFE8D6 50%, #FDEBD0 100%);
-  border-bottom: 2px solid var(--card-border);
+  background: linear-gradient(135deg, #FFF5E6 0%, #FFE8D0 50%, #FFDDB8 100%);
+  border-bottom: 3px solid #E8C9A0;
   padding: 0 24px;
   position: sticky;
   top: 0;
   z-index: 100;
   backdrop-filter: blur(20px);
+  box-shadow: 0 2px 0 #F5D5B0, 0 4px 0 rgba(200,150,100,0.08);
 }
 .header-inner {
   max-width: 1200px; margin: 0 auto;
@@ -85,10 +99,11 @@ body {
 .main { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
 
 .users-strip {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius); padding: 20px 32px;
-  margin-bottom: 36px; box-shadow: var(--shadow-sm);
+  background: linear-gradient(135deg, #FFF9F2 0%, #FFF3E3 100%);
+  border: 2px solid #E8D0B8;
+  border-radius: 14px; padding: 20px 32px;
+  margin-bottom: 36px;
+  box-shadow: 3px 3px 0 rgba(180,130,100,0.1), 0 4px 12px rgba(180,130,100,0.06);
   display: flex; align-items: center; justify-content: center;
   gap: 36px; flex-wrap: wrap;
 }
@@ -145,11 +160,12 @@ body {
 }
 .btn-primary {
   background: var(--accent); color: #fff;
-  box-shadow: 0 2px 8px rgba(224, 122, 61, 0.3);
+  box-shadow: 3px 3px 0 rgba(180,100,50,0.2), 0 2px 8px rgba(224,122,61,0.3);
+  border: 1px solid rgba(255,255,255,0.2);
 }
 .btn-primary:hover {
-  background: var(--accent-deep); transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(194, 90, 31, 0.35);
+  background: var(--accent-deep); transform: translateY(-2px);
+  box-shadow: 4px 4px 0 rgba(180,100,50,0.25), 0 4px 14px rgba(194,90,31,0.35);
 }
 .btn-success {
   background: var(--accent-green); color: #fff;
@@ -176,13 +192,24 @@ body {
 }
 .recipe-card {
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
-  overflow: hidden; box-shadow: var(--shadow-sm);
+  border: 2px solid #E8D0B8;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 3px 3px 0 rgba(180,130,100,0.12), 0 2px 8px rgba(180,130,100,0.06);
   transition: var(--transition);
+  position: relative;
+}
+.recipe-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 12px;
+  pointer-events: none;
 }
 .recipe-card:hover {
-  box-shadow: var(--shadow-lg); transform: translateY(-2px);
+  box-shadow: 5px 5px 0 rgba(180,130,100,0.18), 0 8px 24px rgba(180,130,100,0.14);
+  transform: translateY(-3px);
 }
 .recipe-card-img {
   width: 100%; height: 200px; object-fit: cover;
@@ -254,12 +281,25 @@ body {
 }
 .dish-card {
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
-  overflow: hidden; box-shadow: var(--shadow-sm);
+  border: 2px solid #E8D0B8;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 3px 3px 0 rgba(180,130,100,0.12), 0 2px 8px rgba(180,130,100,0.06);
   transition: var(--transition);
+  position: relative;
 }
-.dish-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.dish-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 12px;
+  pointer-events: none;
+}
+.dish-card:hover {
+  box-shadow: 5px 5px 0 rgba(180,130,100,0.18), 0 8px 24px rgba(180,130,100,0.14);
+  transform: translateY(-3px);
+}
 .dish-photo {
   width: 100%; height: 240px; object-fit: cover;
   background: linear-gradient(135deg, #FDEBD0, #FAD7A1);
@@ -301,13 +341,21 @@ body {
 }
 .modal-overlay.hidden { display: none; }
 .modal {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  background: linear-gradient(180deg, #FFFBF5 0%, #FFF6EC 100%);
+  border: 2px solid #E8D0B8;
+  border-radius: 14px;
+  box-shadow: 6px 6px 0 rgba(180,130,100,0.12), 0 12px 40px rgba(180,130,100,0.15);
   width: 100%; max-width: 540px;
   max-height: 85vh; overflow-y: auto;
   padding: 32px;
+  position: relative;
+}
+.modal::after {
+  content: '';
+  position: absolute; inset: 0;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 12px;
+  pointer-events: none;
 }
 .modal h3 {
   font-family: var(--font-heading); font-size: 22px;
@@ -408,14 +456,15 @@ body {
 .form-hint { font-size: 13px; color: #B8957A; margin-bottom: 16px; line-height: 1.6; }
 .encourage-banner {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, #FFF0DC, #FFE4CC);
-  border: 1px solid #F0C78E;
-  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #FFF5E6, #FFEAD4);
+  border: 2px solid #EFD0B0;
+  border-radius: 12px;
   padding: 12px 20px;
   text-align: center;
   font-family: var(--font-body);
   font-size: 15px; color: var(--accent-deep);
   letter-spacing: 1px;
+  box-shadow: 2px 2px 0 rgba(200,150,100,0.1);
 }
 .recipe-card-img-wrap { height: 200px; overflow: hidden; }
 .recipe-ingredients {
@@ -456,12 +505,13 @@ body {
   position: fixed; bottom: 40px; left: 50%;
   transform: translateX(-50%);
   background: #5B8C5A; color: #fff;
-  padding: 14px 28px; border-radius: 28px;
+  padding: 14px 28px; border-radius: 20px;
   font-family: KaiTi, STKaiti, serif;
   font-size: 15px; letter-spacing: 1px;
   z-index: 999; white-space: nowrap;
-  box-shadow: 0 6px 24px rgba(91,140,90,0.35);
+  box-shadow: 4px 4px 0 rgba(60,90,60,0.2), 0 6px 24px rgba(91,140,90,0.25);
   animation: toastIn 0.4s ease;
+  border: 2px solid rgba(255,255,255,0.3);
 }
 .toast-msg.toast-hide { opacity: 0; transition: opacity 0.4s ease; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
@@ -469,14 +519,15 @@ body {
 .form-hint { font-size: 13px; color: #B8957A; margin-bottom: 16px; line-height: 1.6; }
 .encourage-banner {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, #FFF0DC, #FFE4CC);
-  border: 1px solid #F0C78E;
-  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #FFF5E6, #FFEAD4);
+  border: 2px solid #EFD0B0;
+  border-radius: 12px;
   padding: 12px 20px;
   text-align: center;
   font-family: var(--font-body);
   font-size: 15px; color: var(--accent-deep);
   letter-spacing: 1px;
+  box-shadow: 2px 2px 0 rgba(200,150,100,0.1);
 }
 .recipe-card-img-wrap { height: 200px; overflow: hidden; }
 .recipe-card-img-wrap .recipe-card-img { width: 100%; height: 100%; object-fit: cover; }
@@ -539,12 +590,13 @@ body {
   position: fixed; bottom: 40px; left: 50%;
   transform: translateX(-50%);
   background: #5B8C5A; color: #fff;
-  padding: 14px 28px; border-radius: 28px;
+  padding: 14px 28px; border-radius: 20px;
   font-family: KaiTi, STKaiti, serif;
   font-size: 15px; letter-spacing: 1px;
   z-index: 999; white-space: nowrap;
-  box-shadow: 0 6px 24px rgba(91,140,90,0.35);
+  box-shadow: 4px 4px 0 rgba(60,90,60,0.2), 0 6px 24px rgba(91,140,90,0.25);
   animation: toastIn 0.4s ease;
+  border: 2px solid rgba(255,255,255,0.3);
 }
 .toast-msg.toast-hide { opacity: 0; transition: opacity 0.4s ease; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
@@ -577,7 +629,7 @@ body {
     <div class="empty-state hidden" id="recipeEmpty">
       <div class="empty-icon">📖</div>
       <div class="empty-text">继续添加菜谱吧！</div>
-      <div class="empty-hint">从小红书或B站发现美味，粘贴链接即可添加</div>
+      <div class="empty-hint">从小红书或B站发现美味，</div>
     </div>
   </section>
 
