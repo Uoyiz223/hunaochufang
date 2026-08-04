@@ -614,6 +614,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -805,6 +806,10 @@ function showRecipeForm(existing, editIdx) {
       '</div>' +
     '</div>' +
     '<div class="form-group"><label>🍲 菜名</label><input type="text" id="fTitle" value="' + escAttr(title) + '" placeholder="这道菜叫什么呀？"></div>' +
+    '<div class="form-group"><label>🔗 原帖链接</label>' +
+      '<input type="text" id="fLink" value="' + escAttr(source) + '" placeholder="小红书/B站/抖音/下厨房链接（可选）" style="color:var(--accent-green);">' +
+      '<p style="font-size:11px;color:#B8957A;margin:4px 0 0 0;">💡 粘贴链接后保存，详情页可点击"查看原帖"</p>' +
+    '</div>' +
     '<div class="form-group"><label>👤 收藏者</label><select id="fAuthor">' + authorOptions + '</select></div>' +
     '<div class="form-group"><label>🛒 所需食材</label>' +
     '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">' +
@@ -991,6 +996,7 @@ function ocrFromImage(type) {
 
 function saveRecipeForm(editIdx) {
   var title = document.getElementById('fTitle').value.trim();
+  var sourceLink = document.getElementById('fLink') ? document.getElementById('fLink').value.trim() : '';
   var source = '';
   var authorName = document.getElementById('fAuthor').value;
   var method = document.getElementById('fMethod').value.trim();
@@ -998,7 +1004,8 @@ function saveRecipeForm(editIdx) {
   if (!title) { alert('🍲 请输入菜名哦～'); return; }
   if (!method) { alert('📝 请输入制作方法哦～'); return; }
   var recipes = loadRecipes();
-  var entry = { title: title, source: source, authorName: authorName, method: method, ingredients: ingredients, image: recipeImageData || '', ingrImage: ingrImageData || '', methodImage: methodImageData || '', date: new Date().toISOString(), status: 'new' };
+  var entry = { title: title, source: sourceLink,
+      authorName: authorName, method: method, ingredients: ingredients, image: recipeImageData || '', ingrImage: ingrImageData || '', methodImage: methodImageData || '', date: new Date().toISOString(), status: 'new' };
   if (editIdx >= 0) { entry.status = recipes[editIdx].status; entry.date = recipes[editIdx].date; if (!recipeImageData) entry.image = recipes[editIdx].image; recipes[editIdx] = entry; }
   else { recipes.unshift(entry); }
   saveRecipes(recipes); closeModal(); renderRecipes();
@@ -1260,7 +1267,8 @@ function saveDishForm(editIdx) {
   var rating = parseInt(document.getElementById('fRatingVal').value) || 0;
   if (!title) { alert('🍲 请从菜谱中选择菜名哦～'); return; }
   var dishes = loadDishes();
-  var entry = { title: title, authorName: authorName, desc: desc, rating: rating, photo: dishPhotoData, date: new Date().toISOString() };
+  var entry = { title: title, source: sourceLink,
+      authorName: authorName, desc: desc, rating: rating, photo: dishPhotoData, date: new Date().toISOString() };
   if (editIdx >= 0) { entry.date = dishes[editIdx].date; if (!dishPhotoData) entry.photo = dishes[editIdx].photo; dishes[editIdx] = entry; }
   else { dishes.unshift(entry); }
   saveDishes(dishes); closeModal(); renderDishes();
