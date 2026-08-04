@@ -40,23 +40,14 @@ body {
   line-height: 1.7;
   min-height: 100vh;
   /* Manga-inspired halftone dots + warm gradient */
+  background:
+    #FFFAF2;
   background-image:
-    radial-gradient(circle, rgba(0,0,0,0.06) 0.8px, transparent 0.8px),
-    radial-gradient(circle, rgba(180,120,60,0.04) 0.5px, transparent 0.5px),
-    linear-gradient(180deg, #FFF8ED 0%, #FFF3E3 40%, #FFEDD9 100%);
-  background-size: 18px 18px, 27px 27px, 100% 100%;
-  background-position: 0 0, 9px 9px, 0 0;
-  /* Hand-drawn paper lines */
+    radial-gradient(ellipse at 15% 10%, rgba(255,200,150,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 30%, rgba(255,180,130,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 40% 80%, rgba(240,170,120,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 65%, rgba(255,220,180,0.06) 0%, transparent 50%);
   position: relative;
-}
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(180,140,100,0.08) 27px, rgba(180,140,100,0.08) 28px);
-  pointer-events: none;
-  z-index: -1;
 }
 
 .header {
