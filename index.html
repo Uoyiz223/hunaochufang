@@ -619,6 +619,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -1089,12 +1090,20 @@ function ocrFromImage(type) {
       }
     }).then(function(result) {
       var text = result.data.text.trim();
-      // Clean up: remove spaces between CJK characters, condense newlines
-      text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf])\s+(?=[\u4e00-\u9fff\u3400-\u4dbf])/g, '$1');
+      // Aggressively clean spaces from OCR output:
+      // 1. Remove ALL spaces/newlines between CJK characters
+      text = text.replace(/([\u4e00-\u9fff\u3000-\u303f\uff00-\uffef])\s+([\u4e00-\u9fff\u3000-\u303f\uff00-\uffef])/g, function(m, c1, c2) { return c1 + c2; });
+      // 2. Remove any remaining space-like chars (full-width spaces, zero-width)
+      text = text.replace(/[\u3000\u2000-\u200f\u2028-\u202f\u205f\u00a0]/g, '');
+      // 3. Remove spaces at start of lines
+      text = text.replace(/^[ ]+/gm, '');
+      // 4. Collapse multiple spaces to one (for Latin/numbers)
+      text = text.replace(/  +/g, ' ');
+      // 5. Condense excessive newlines
       text = text.replace(/\n{3,}/g, '\n\n');
       if (!text) { showToast('⚠️ 未识别到文字，请手动输入'); if (existing) existing.value = ''; return; }
       if (existing) { existing.value = text; }
-      showToast('✅ 识别完成！请检查并修改文字（空格已自动清理）');
+      showToast('✅ 识别完成！请检查并修改文字');
     }).catch(function(err) {
       showToast('⚠️ 识别失败，请直接打字');
       if (existing) { existing.value = '';
