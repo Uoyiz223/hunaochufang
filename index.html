@@ -620,6 +620,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -1247,7 +1248,7 @@ function finishCooking(recipeIdx) {
   var recipes = loadRecipes(); var recipe = recipes[recipeIdx];
   recipes[recipeIdx].status = 'done'; saveRecipes(recipes);
   var dishes = loadDishes();
-  dishes.unshift({ title: recipe.title, authorName: recipe.authorName, desc: '按照菜谱完成，等待补充品尝描述...', rating: 0, photo: recipe.image || '', date: new Date().toISOString(), recipeId: recipeIdx });
+  dishes.unshift({ title: recipe.title, authorName: recipe.authorName, desc: '按照菜谱完成，等待补充品尝描述...', rating: 0, photo: '', date: new Date().toISOString(), recipeId: recipeIdx });
   saveDishes(dishes);
   closeModal(); renderRecipes(); renderDishes(); navigateTo('dish');
   showToast('🎉 美味出炉！「' + recipe.title + '」已加入成品展示');
@@ -1412,8 +1413,8 @@ function saveDishForm(editIdx) {
   if (!title) { alert('🍲 请从菜谱中选择菜名哦～'); return; }
   var dishes = loadDishes();
   var entry = { title: title,
-      authorName: authorName, desc: desc, rating: rating, photo: dishPhotoData, date: new Date().toISOString() };
-  if (editIdx >= 0) { entry.date = dishes[editIdx].date; if (!dishPhotoData) entry.photo = dishes[editIdx].photo; dishes[editIdx] = entry; }
+      authorName: authorName, desc: desc, rating: rating, photo: dishPhotoData || '', date: new Date().toISOString() };
+  if (editIdx >= 0) { entry.date = dishes[editIdx].date; if (!dishPhotoData) entry.photo = dishes[editIdx].photo || ''; dishes[editIdx] = entry; }
   else { dishes.unshift(entry); }
   saveDishes(dishes); closeModal(); renderDishes();
   showToast('🎉 成品记录保存成功！');
