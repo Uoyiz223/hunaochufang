@@ -616,6 +616,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -625,6 +626,14 @@ var _dataCache = null;
 var _dataSha = null;
 var _ghToken = _p1 + _p2; // assembled from split files
 
+// Decode base64 + UTF-8 (atob only handles latin1, manual UTF-8 decode needed)
+function b64ToUTF8(b64) {
+  var binary = atob(b64);
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
 // Load shared data from GitHub
 function loadSharedData(callback) {
   // Use GitHub API (no CDN cache) to get fresh data
@@ -632,8 +641,8 @@ function loadSharedData(callback) {
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
       _dataSha = d.sha;
-      // Decode base64 content
-      var decoded = JSON.parse(atob(d.content));
+      // Decode base64 content with proper UTF-8 handling
+      var decoded = JSON.parse(b64ToUTF8(d.content));
       _dataCache = decoded;
       callback(decoded);
     })
@@ -653,36 +662,63 @@ function loadSharedData(callback) {
 }
 
 // Auto-sync to GitHub
-function autoSyncToGitHub(data) {
+function autoSyncToGitHub(data, retryCount) {
   _dataCache = data;
-  var body = JSON.stringify(data, null, 2);
-  var encoded = btoa(unescape(encodeURIComponent(body)));
-  var payload = {
-    message: 'Auto-sync: ' + new Date().toLocaleString('zh-CN'),
-    content: encoded,
-    sha: _dataSha,
-    branch: 'main'
-  };
-  fetch(GH_API, {
-    method: 'PUT',
-    headers: {
-      'Authorization': 'token ' + _ghToken,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  })
-    .then(function(r) { return r.json(); })
-    .then(function(res) {
-      if (res.content && res.content.sha) {
-        _dataSha = res.content.sha;
-        showToast('☁️ 已自动同步到云端！所有人刷新即可看到');
-      } else {
-        showToast('⚠️ 同步失败，数据仅在本地。请告诉我');
-      }
+  retryCount = retryCount || 0;
+
+  function doPut() {
+    var body = JSON.stringify(data, null, 2);
+    // Encode to UTF-8 bytes then base64 (matches b64ToUTF8 decoder)
+    var utf8Bytes = new TextEncoder().encode(body);
+    var binary = '';
+    for (var i = 0; i < utf8Bytes.length; i++) { binary += String.fromCharCode(utf8Bytes[i]); }
+    var encoded = btoa(binary);
+    var payload = {
+      message: 'Auto-sync: ' + new Date().toLocaleString('zh-CN'),
+      content: encoded,
+      sha: _dataSha,
+      branch: 'main'
+    };
+    fetch(GH_API, {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'token ' + _ghToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
     })
-    .catch(function() {
-      showToast('⚠️ 网络问题，数据仅在本地保存');
-    });
+      .then(function(r) { return r.json().then(function(j) { return {ok: r.ok, status: r.status, body: j}; }); })
+      .then(function(res) {
+        if (res.ok && res.body.content && res.body.content.sha) {
+          _dataSha = res.body.content.sha;
+          showToast('☁️ 已自动同步到云端！所有人刷新即可看到');
+        } else if (res.status === 409 && retryCount < 2) {
+          // SHA conflict - fetch fresh SHA and retry
+          fetch(GH_API + '?t=' + Date.now(), {
+            headers: { 'Authorization': 'token ' + _ghToken, 'Accept': 'application/vnd.github.v3+json' },
+            cache: 'no-store'
+          }).then(function(r) { return r.json(); }).then(function(d) {
+            _dataSha = d.sha;
+            autoSyncToGitHub(data, retryCount + 1);
+          }).catch(function() { showToast('⚠️ 同步冲突，数据仅在本地'); });
+        } else if (!_dataSha && retryCount < 1) {
+          // No SHA yet - fetch it first
+          fetch(GH_API + '?t=' + Date.now(), {
+            headers: { 'Authorization': 'token ' + _ghToken, 'Accept': 'application/vnd.github.v3+json' },
+            cache: 'no-store'
+          }).then(function(r) { return r.json(); }).then(function(d) {
+            _dataSha = d.sha;
+            autoSyncToGitHub(data, retryCount + 1);
+          }).catch(function() { showToast('⚠️ 同步失败，数据仅在本地'); });
+        } else {
+          showToast('⚠️ 同步失败，数据仅在本地。请告诉我');
+        }
+      })
+      .catch(function() {
+        showToast('⚠️ 网络问题，数据仅在本地保存');
+      });
+  }
+  doPut();
 }
 
 function loadRecipes() {
