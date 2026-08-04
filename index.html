@@ -618,6 +618,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -720,6 +721,35 @@ function autoSyncToGitHub(data, retryCount) {
       });
   }
   doPut();
+}
+
+// Compress image to max 200KB as JPEG for GitHub storage
+function compressImage(dataUrl, maxKB, callback) {
+  maxKB = maxKB || 200;
+  var img = new Image();
+  img.onload = function() {
+    var canvas = document.createElement('canvas');
+    var maxW = 800; var maxH = 800;
+    var w = img.width; var h = img.height;
+    if (w > maxW || h > maxH) {
+      var ratio = Math.min(maxW / w, maxH / h);
+      w = Math.round(w * ratio); h = Math.round(h * ratio);
+    }
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    // Try quality 0.7 first, reduce if too large
+    var quality = 0.7;
+    var result = canvas.toDataURL('image/jpeg', quality);
+    // If still > maxKB, reduce quality further
+    while (result.length > maxKB * 1024 * 1.37 && quality > 0.2) {
+      quality -= 0.1;
+      result = canvas.toDataURL('image/jpeg', quality);
+    }
+    callback(result);
+  };
+  img.onerror = function() { callback(dataUrl); };
+  img.src = dataUrl;
 }
 
 function loadRecipes() {
@@ -879,9 +909,11 @@ function handleIngrImage(input) {
   var file = input.files[0]; if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    ingrImageData = e.target.result;
-    var preview = document.getElementById('ingrImgPreview');
-    if (preview) { preview.innerHTML = '<img src="' + ingrImageData + '" style="max-width:100%;max-height:80px;border-radius:6px;">'; }
+    compressImage(e.target.result, 150, function(compressed) {
+      ingrImageData = compressed;
+      var preview = document.getElementById('ingrImgPreview');
+      if (preview) { preview.innerHTML = '<img src="' + ingrImageData + '" style="max-width:100%;max-height:80px;border-radius:6px;">'; }
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -889,9 +921,11 @@ function handleMethodImage(input) {
   var file = input.files[0]; if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    methodImageData = e.target.result;
-    var preview = document.getElementById('methodImgPreview');
-    if (preview) { preview.innerHTML = '<img src="' + methodImageData + '" style="max-width:100%;max-height:80px;border-radius:6px;">'; }
+    compressImage(e.target.result, 150, function(compressed) {
+      methodImageData = compressed;
+      var preview = document.getElementById('methodImgPreview');
+      if (preview) { preview.innerHTML = '<img src="' + methodImageData + '" style="max-width:100%;max-height:80px;border-radius:6px;">'; }
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -1346,12 +1380,17 @@ function handlePhoto(input) {
   var file = input.files[0]; if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    dishPhotoData = e.target.result;
-    var area = document.getElementById('fileArea');
-    var existing = area.querySelector('.preview-img'); if (existing) existing.remove();
-    var img = document.createElement('img'); img.className = 'preview-img'; img.src = dishPhotoData; img.alt = '预览';
-    area.insertBefore(img, area.firstChild); area.classList.add('has-file');
-    var hint = document.getElementById('fileHint'); if (hint) hint.style.display = 'none';
+    var rawData = e.target.result;
+    // Compress before storing
+    compressImage(rawData, 200, function(compressed) {
+      dishPhotoData = compressed;
+      var area = document.getElementById('fileArea');
+      var existing = area.querySelector('.preview-img'); if (existing) existing.remove();
+      var img = document.createElement('img'); img.className = 'preview-img'; img.src = dishPhotoData; img.alt = '预览';
+      area.insertBefore(img, area.firstChild); area.classList.add('has-file');
+      var hint = document.getElementById('fileHint'); if (hint) hint.style.display = 'none';
+      showToast('📸 照片已压缩上传');
+    });
   };
   reader.readAsDataURL(file);
 }
