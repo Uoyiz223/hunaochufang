@@ -617,6 +617,7 @@ body {
 
 
 
+
 <script>
 // ===== DATA STORE =====
 var DATA_URL = 'https://api.github.com/repos/Uoyiz223/hunaochufang/contents/data.json';
@@ -921,22 +922,23 @@ function openCropModal(imageData) {
 }
 
 function closeCropModal() {
-  // Restore recipe form
-  showRecipeForm(null, -1);
-  // Re-inject the image data
-  recipeImageData = _cropTarget ? _cropTarget.imageData : null;
-  var imgHint = document.getElementById('imgHint');
-  if (imgHint && recipeImageData) {
-    imgHint.style.display = 'none';
-    var area = imgHint.parentElement;
-    var existing = area.querySelector('.preview-img');
-    if (existing) existing.remove();
-    var img = document.createElement('img');
-    img.className = 'preview-img';
-    img.src = recipeImageData;
-    img.style.cssText = 'max-width:100%;max-height:140px;border-radius:10px;margin-bottom:8px;display:block;';
-    area.insertBefore(img, area.firstChild);
-  }
+  // Just close the crop modal, keep recipeImageData as-is
+  recipeImageData = _cropTarget ? _cropTarget.imageData : recipeImageData;
+  closeModal();
+  // Re-open the recipe form with the image
+  var formData = {
+    title: (document.getElementById('fTitle')||{}).value || '',
+    authorName: (document.getElementById('fAuthor')||{}).value || '',
+    ingredients: (document.getElementById('fIngredients')||{}).value || '',
+    method: (document.getElementById('fMethod')||{}).value || '',
+    image: recipeImageData,
+    ingrImage: ingrImageData,
+    methodImage: methodImageData
+  };
+  // Re-show the form
+  setTimeout(function() {
+    showRecipeForm(formData, -1);
+  }, 100);
 }
 
 function initCrop() {
@@ -944,9 +946,13 @@ function initCrop() {
   var box = document.getElementById('cropBox');
   var wrapper = document.getElementById('cropWrapper');
   if (!img || !box) return;
-  var size = Math.min(wrapper.clientWidth, img.naturalWidth, img.naturalHeight, 300);
+  var maxDim = Math.max(img.naturalWidth, img.naturalHeight) || 400;
+  var imgDisplayW = Math.min(wrapper.clientWidth, img.naturalWidth, 400);
+  var ratio = imgDisplayW / (img.naturalWidth || 1);
+  var imgDisplayH = (img.naturalHeight || 300) * ratio;
+  var size = Math.min(imgDisplayW, imgDisplayH, 280);
   var left = (wrapper.clientWidth - size) / 2;
-  var top = (img.naturalHeight ? (Math.min(img.clientHeight||400,400) - size) / 2 : 50);
+  var top = (imgDisplayH - size) / 2;
   box.style.width = size + 'px';
   box.style.height = size + 'px';
   box.style.left = left + 'px';
@@ -983,24 +989,20 @@ function applyCrop() {
   ctx.drawImage(img, sx, sy, sw, sw, 0, 0, size, size);
   recipeImageData = canvas.toDataURL('image/jpeg', 0.85);
   _cropTarget.imageData = recipeImageData;
-  closeCropModal();
   closeModal();
   // Re-show form with cropped image
   setTimeout(function() {
-    var title = document.getElementById('fTitle');
-    var author = document.getElementById('fAuthor');
-    var ingr = document.getElementById('fIngredients');
-    var method = document.getElementById('fMethod');
-    showRecipeForm({
-      title: title ? title.value : '',
-      authorName: author ? author.value : '',
-      ingredients: ingr ? ingr.value : '',
-      method: method ? method.value : '',
+    var formData = {
+      title: (document.getElementById('fTitle')||{}).value || '',
+      authorName: (document.getElementById('fAuthor')||{}).value || '',
+      ingredients: (document.getElementById('fIngredients')||{}).value || '',
+      method: (document.getElementById('fMethod')||{}).value || '',
       image: recipeImageData,
       ingrImage: ingrImageData,
       methodImage: methodImageData
-    }, -1);
-  }, 200);
+    };
+    showRecipeForm(formData, -1);
+  }, 100);
 }
 
 function handleRecipeImage(input) {
@@ -1053,9 +1055,12 @@ function ocrFromImage(type) {
       }
     }).then(function(result) {
       var text = result.data.text.trim();
+      // Clean up: remove spaces between CJK characters, condense newlines
+      text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf])\s+(?=[\u4e00-\u9fff\u3400-\u4dbf])/g, '$1');
+      text = text.replace(/\n{3,}/g, '\n\n');
       if (!text) { showToast('⚠️ 未识别到文字，请手动输入'); if (existing) existing.value = ''; return; }
       if (existing) { existing.value = text; }
-      showToast('✅ 识别完成！请检查并修改文字');
+      showToast('✅ 识别完成！请检查并修改文字（空格已自动清理）');
     }).catch(function(err) {
       showToast('⚠️ 识别失败，请直接打字');
       if (existing) { existing.value = '';
@@ -1322,7 +1327,7 @@ function showDishForm(existing, editIdx) {
     '<div class="form-group"><label>🍲 菜名（从菜谱选择）</label><select id="fDishTitle">' + recipeOptions + '</select></div>' +
     '<div class="form-group"><label>👤 制作者</label><select id="fDishAuthor">' + authorOptions + '</select></div>' +
     '<div class="form-group"><label>📸 成品美照</label><div class="file-upload-area' + fileClass + '" id="fileArea" onclick="document.getElementById(\'fPhoto\').click()">' +
-      preview + '<div id="fileHint" style="' + (dishPhotoData ? 'display:none' : '') + '">📷 📸 请上传你自己拍摄的成品照片</div>' +
+      preview + '<div id="fileHint" style="' + (dishPhotoData ? 'display:none' : '') + '">请上传你自己拍摄的成品照片哦</div>' +
       '<input type="file" id="fPhoto" accept="image/*" style="display:none" onchange="handlePhoto(this)"></div></div>' +
     '<div class="form-group"><label>💬 品尝描述</label><textarea id="fDishDesc" placeholder="口感如何？卖相怎么样？有什么想说的？" rows="3">' + escHtml(desc) + '</textarea></div>' +
     '<div class="form-group"><label>🏆 口味评价（单选）</label><div class="rating-radio-group" id="ratingGroup">' + ratingRadios + '</div><input type="hidden" id="fRatingVal" value="' + rating + '"></div>' +
@@ -1358,7 +1363,7 @@ function saveDishForm(editIdx) {
   var rating = parseInt(document.getElementById('fRatingVal').value) || 0;
   if (!title) { alert('🍲 请从菜谱中选择菜名哦～'); return; }
   var dishes = loadDishes();
-  var entry = { title: title, source: sourceLink,
+  var entry = { title: title,
       authorName: authorName, desc: desc, rating: rating, photo: dishPhotoData, date: new Date().toISOString() };
   if (editIdx >= 0) { entry.date = dishes[editIdx].date; if (!dishPhotoData) entry.photo = dishes[editIdx].photo; dishes[editIdx] = entry; }
   else { dishes.unshift(entry); }
