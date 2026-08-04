@@ -10,8 +10,18 @@
       "ingrImage": "",
       "methodImage": "",
       "date": "2026-08-04T01:00:00.000Z",
-      "status": "cooking"
+      "status": "done"
     }
   ],
-  "dishes": []
+  "dishes": [
+    {
+      "title": "公瑾爆蛋",
+      "authorName": "睡睡平安",
+      "desc": "按照菜谱完成，等待补充品尝描述...",
+      "rating": 0,
+      "photo": "",
+      "date": "2026-08-04T01:39:34.903Z",
+      "recipeId": 0
+    }
+  ]
 }
