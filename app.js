@@ -51,8 +51,11 @@ function loadSharedData(callback) {
       });
   }
 
-  // Use GitHub API (no CDN cache) to get fresh data
-  fetch(GH_API + '?t=' + Date.now(), { cache: 'no-store' })
+  // Use GitHub API with auth token to avoid 60/hr rate limit
+  fetch(GH_API + '?t=' + Date.now(), {
+    cache: 'no-store',
+    headers: { 'Authorization': 'token ' + _ghToken, 'Accept': 'application/vnd.github.v3+json' }
+  })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
       _dataSha = d.sha;
