@@ -482,6 +482,16 @@ body {
   .btn { font-size: 13px; padding: 7px 14px; }
   .btn-lg { padding: 12px 28px; font-size: 15px; }
   .encourage-banner { font-size: 13px; padding: 10px 12px; }
+.loading-hint {
+  text-align: center; padding: 48px 20px; color: var(--text-secondary);
+  font-size: 18px; opacity: 0.7;
+  animation: loadingPulse 1.5s ease-in-out infinite;
+}
+.loading-hint small { display: block; margin-top: 6px; font-size: 13px; opacity: 0.6; }
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
   .cooking-steps li { padding: 10px 0; }
   .cooking-steps li::before { min-width: 26px; height: 26px; font-size: 12px; }
   .cooking-steps li .step-text { font-size: 14px; }
@@ -739,29 +749,48 @@ function b64ToUTF8(b64) {
 
 // Load shared data from GitHub
 function loadSharedData(callback) {
-  // Use GitHub API (no CDN cache) to get fresh data
+  var done = false;
+  function finish(data) {
+    if (done) return; done = true;
+    if (_loadTimer) { clearTimeout(_loadTimer); _loadTimer = null; }
+    callback(data);
+  }
+
+  _loadTimer = setTimeout(function() {
+    showToast('⏳ 正在从云端加载数据，请稍候...');
+  }, 3000);
+
+  function tryFallback() {
+    fetch(DATA_RAW_URL + '?t=' + Date.now(), { cache: 'reload' })
+      .then(function(r) {
+        if (!r.ok) throw new Error('Raw HTTP ' + r.status);
+        return r.text().then(function(t) {
+          if (t.charCodeAt(0) === 0xFEFF) { t = t.slice(1); }
+          return JSON.parse(t);
+        });
+      })
+      .then(function(d) {
+        _dataCache = d;
+        finish(d);
+      })
+      .catch(function(err2) {
+        console.warn('Raw CDN failed:', err2.message || err2);
+        if (!_dataCache) { _dataCache = { recipes: [], dishes: [] }; }
+        finish(_dataCache);
+      });
+  }
+
   fetch(GH_API + '?t=' + Date.now(), { cache: 'no-store' })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
       _dataSha = d.sha;
-      // Decode base64 content with proper UTF-8 handling
       var decoded = JSON.parse(b64ToUTF8(d.content));
       _dataCache = decoded;
-      callback(decoded);
+      finish(decoded);
     })
-    .catch(function() {
-      // Fallback to raw CDN with cache bust
-      fetch(DATA_RAW_URL + '?t=' + Date.now(), { cache: 'reload' })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          _dataCache = d;
-          callback(d);
-        })
-        .catch(function() {
-          // Keep existing cache if we have one, only use empty as last resort
-          if (!_dataCache) { _dataCache = { recipes: [], dishes: [] }; }
-          callback(_dataCache);
-        });
+    .catch(function(err1) {
+      console.warn('GitHub API failed, trying raw CDN:', err1.message || err1);
+      tryFallback();
     });
 }
 
@@ -1524,6 +1553,13 @@ function saveDishForm(editIdx) {
 // ===== INIT =====
 document.getElementById('btnAddRecipe').addEventListener('click', function() { showRecipeForm(); });
 document.getElementById('btnAddDish').addEventListener('click', function() { showDishForm(); });
+
+// Show loading state immediately so page doesn't look blank
+var recipeGrid = document.getElementById('recipeGrid');
+var dishGrid = document.getElementById('dishGrid');
+if (recipeGrid) recipeGrid.innerHTML = '<div class="loading-hint">🍳 正在从云端同步数据...<br><small>首次加载可能需要几秒</small></div>';
+if (dishGrid) dishGrid.innerHTML = '<div class="loading-hint">🥢 等待厨房就绪...</div>';
+
 renderUsers(); renderRecipes(); renderDishes();
 
 </script>
