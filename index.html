@@ -780,7 +780,10 @@ function loadSharedData(callback) {
       });
   }
 
-  fetch(GH_API + '?t=' + Date.now(), { cache: 'no-store' })
+  fetch(GH_API + '?t=' + Date.now(), {
+    cache: 'no-store',
+    headers: { 'Authorization': 'token ' + _ghToken, 'Accept': 'application/vnd.github.v3+json' }
+  })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
       _dataSha = d.sha;
